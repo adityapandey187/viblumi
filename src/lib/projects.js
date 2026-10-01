@@ -16,17 +16,17 @@ function check({ data, error }) {
 
 export async function listProjects() {
   return check(
-    await supabase.from("projects").select(LIST_COLUMNS).order("updated_at", { ascending: false })
+    await supabase.from("viblumi_projects").select(LIST_COLUMNS).order("updated_at", { ascending: false })
   );
 }
 
 export async function loadProject(id) {
-  return check(await supabase.from("projects").select("*").eq("id", id).single());
+  return check(await supabase.from("viblumi_projects").select("*").eq("id", id).single());
 }
 
 export async function createProject({ name, mode }) {
   return check(
-    await supabase.from("projects").insert({ name, mode }).select("*").single()
+    await supabase.from("viblumi_projects").insert({ name, mode }).select("*").single()
   );
 }
 
@@ -34,7 +34,7 @@ export async function createProject({ name, mode }) {
 export async function saveProject(id, fields) {
   return check(
     await supabase
-      .from("projects")
+      .from("viblumi_projects")
       .update({ ...fields, updated_at: new Date().toISOString() })
       .eq("id", id)
       .select(LIST_COLUMNS)
@@ -43,5 +43,5 @@ export async function saveProject(id, fields) {
 }
 
 export async function deleteProject(id) {
-  check(await supabase.from("projects").delete().eq("id", id));
+  check(await supabase.from("viblumi_projects").delete().eq("id", id));
 }

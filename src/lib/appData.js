@@ -29,7 +29,7 @@ export function createAppData(projectId) {
 }
 
 function cloudData(projectId) {
-  const rows = () => supabase.from("app_rows");
+  const rows = () => supabase.from("viblumi_app_rows");
   return {
     // Everything this project stored, grouped by collection (for the Database tab).
     async listAll() {

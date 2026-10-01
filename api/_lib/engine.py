@@ -90,7 +90,7 @@ def build_export_sql(collections):
     """
     SQL a developer can run in their OWN Supabase project to host the app's
     data themselves. Inside Viblumi everything is stored in one shared
-    `app_rows` table, so this is only needed when taking the app elsewhere.
+    `viblumi_app_rows` table, so this is only needed when taking the app elsewhere.
     """
     if not collections:
         return ""

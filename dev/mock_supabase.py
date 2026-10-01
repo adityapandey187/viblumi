@@ -22,7 +22,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 USERS = {}      # email -> {id, email, password}
 REFRESH = {}    # refresh_token -> user id
-TABLES = {"projects": [], "app_rows": []}
+TABLES = {"viblumi_projects": [], "viblumi_app_rows": []}
 
 
 def b64(d: bytes) -> str:
@@ -101,10 +101,10 @@ async def logout():
 # ---------------- Database (PostgREST style) ----------------
 def visible(table, uid):
     """Row level security: only the owner's rows."""
-    if table == "projects":
-        return [r for r in TABLES["projects"] if r["user_id"] == uid]
-    mine = {p["id"] for p in TABLES["projects"] if p["user_id"] == uid}
-    return [r for r in TABLES["app_rows"] if r["project_id"] in mine]
+    if table == "viblumi_projects":
+        return [r for r in TABLES["viblumi_projects"] if r["user_id"] == uid]
+    mine = {p["id"] for p in TABLES["viblumi_projects"] if p["user_id"] == uid}
+    return [r for r in TABLES["viblumi_app_rows"] if r["project_id"] in mine]
 
 
 def apply_filters(rows, params):
@@ -150,7 +150,7 @@ async def rest(table: str, request: Request):
         created = []
         for item in items:
             row = {"id": str(uuid.uuid4()), "created_at": now, **item}
-            if table == "projects":
+            if table == "viblumi_projects":
                 row.setdefault("user_id", uid)
                 row.setdefault("name", "Untitled project")
                 row.setdefault("mode", "website")
@@ -160,7 +160,7 @@ async def rest(table: str, request: Request):
                 if row["user_id"] != uid:
                     return err(403, "new row violates row-level security policy")
             else:
-                if row.get("project_id") not in {p["id"] for p in visible("projects", uid)}:
+                if row.get("project_id") not in {p["id"] for p in visible("viblumi_projects", uid)}:
                     return err(403, "new row violates row-level security policy")
                 row.setdefault("data", {})
             TABLES[table].append(row)
@@ -176,6 +176,6 @@ async def rest(table: str, request: Request):
 
     ids = {r["id"] for r in targets}  # DELETE
     TABLES[table] = [r for r in TABLES[table] if r["id"] not in ids]
-    if table == "projects":  # cascade like the real foreign key
-        TABLES["app_rows"] = [r for r in TABLES["app_rows"] if r["project_id"] not in ids]
+    if table == "viblumi_projects":  # cascade like the real foreign key
+        TABLES["viblumi_app_rows"] = [r for r in TABLES["viblumi_app_rows"] if r["project_id"] not in ids]
     return Response(status_code=204)
