@@ -6,7 +6,7 @@
  * arrives, so the UI can show live progress while the AI writes code.
  */
 
-export async function streamGenerate({ conversation, instruction, currentCode, onEvent }) {
+export async function streamGenerate({ conversation, instruction, currentCode, mode, onEvent }) {
   const response = await fetch("/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -14,6 +14,7 @@ export async function streamGenerate({ conversation, instruction, currentCode, o
       conversation,
       instruction,
       current_code: currentCode || null,
+      mode: mode || "website",
     }),
   });
 

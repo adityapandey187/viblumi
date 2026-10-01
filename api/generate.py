@@ -8,7 +8,8 @@ Request body (JSON):
     {
       "conversation": [{"role": "user"|"assistant", "content": "..."}],
       "instruction":  "a landing page for a coffee shop",
-      "current_code": "<!doctype html>..."   # optional, only when editing
+      "current_code": "<!doctype html>...",  # optional, only when editing
+      "mode": "website" | "app"              # app = full-stack with a database
     }
 
 Streamed events (one JSON object per SSE "data:" line):
@@ -32,7 +33,7 @@ from pydantic import BaseModel
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api._lib import llm
-from api._lib.engine import build_messages, extract_code
+from api._lib.engine import build_export_sql, build_messages, extract_code, find_collections
 from api._lib.http import friendly_error, sse
 
 app = FastAPI()
@@ -42,6 +43,7 @@ class GenerateRequest(BaseModel):
     conversation: List[dict] = []
     instruction: str
     current_code: Optional[str] = None
+    mode: str = "website"  # "website" or "app" (full-stack)
 
 
 def event_stream(body: GenerateRequest):
@@ -54,7 +56,7 @@ def event_stream(body: GenerateRequest):
 
     yield sse({"type": "status", "text": "Contacting the AI model..."})
 
-    messages = build_messages(body.conversation, body.instruction, body.current_code)
+    messages = build_messages(body.conversation, body.instruction, body.current_code, body.mode)
 
     # 1. Stream the model's reply through to the browser as it arrives.
     pieces = []
@@ -78,7 +80,14 @@ def event_stream(body: GenerateRequest):
                    "Try rephrasing your idea."})
         return
 
-    yield sse({"type": "done", "code": code, "summary": note or "Done! Your site is in the preview."})
+    collections = find_collections(code) if body.mode == "app" else []
+    yield sse({
+        "type": "done",
+        "code": code,
+        "summary": note or "Done! Your site is in the preview.",
+        "collections": collections,
+        "export_sql": build_export_sql(collections),
+    })
 
 
 @app.post("/api/generate")

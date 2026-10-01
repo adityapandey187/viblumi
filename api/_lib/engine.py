@@ -8,21 +8,23 @@ engine.py - the brains of the request:
 
 import re
 
-from .prompts import SYSTEM_PROMPT
+from .prompts import APP_ADDENDUM, SYSTEM_PROMPT
 
 # How many previous chat turns we resend to the model for context.
 # More turns = better memory of the conversation, but costs more tokens.
 MAX_HISTORY_TURNS = 8
 
 
-def build_messages(conversation, instruction, current_code=None):
+def build_messages(conversation, instruction, current_code=None, mode="website"):
     """
     conversation: list of prior {"role": "user"|"assistant", "content": str}
                   (assistant messages are short notes, NOT code)
     instruction:  the user's new request, e.g. "make the header blue"
     current_code: the html file as it currently exists (None for the first build)
+    mode:         "website" (static page) or "app" (full-stack with database)
     """
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    system = SYSTEM_PROMPT + (APP_ADDENDUM if mode == "app" else "")
+    messages = [{"role": "system", "content": system}]
 
     # Replay the recent conversation so follow-ups like "now darker" make sense.
     for msg in conversation[-MAX_HISTORY_TURNS:]:
@@ -71,3 +73,34 @@ def extract_code(reply_text):
         return reply_text[start:].strip(), ""
 
     return None, reply_text.strip()
+
+
+# Finds the database collections an app uses, e.g. viblumi.db.list("todos").
+_COLLECTION_RE = re.compile(
+    r"viblumi\.db\.(?:list|insert|update|remove)\(\s*[\"'`]([a-z][a-z0-9_]{0,40})[\"'`]"
+)
+
+
+def find_collections(code):
+    """Return the sorted, de-duplicated collection names the app uses."""
+    return sorted(set(_COLLECTION_RE.findall(code or "")))
+
+
+def build_export_sql(collections):
+    """
+    SQL a developer can run in their OWN Supabase project to host the app's
+    data themselves. Inside Viblumi everything is stored in one shared
+    `app_rows` table, so this is only needed when taking the app elsewhere.
+    """
+    if not collections:
+        return ""
+    lines = ["-- Tables for this app (run in the Supabase SQL Editor).", ""]
+    for name in collections:
+        lines.append(
+            f"create table if not exists public.{name} (\n"
+            f"  id uuid primary key default gen_random_uuid(),\n"
+            f"  data jsonb not null default '{{}}'::jsonb,\n"
+            f"  created_at timestamptz not null default now()\n);\n"
+            f"alter table public.{name} enable row level security;\n"
+        )
+    return "\n".join(lines)

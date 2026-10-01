@@ -46,6 +46,27 @@ SITE_TEMPLATE = """<!DOCTYPE html>
 </html>"""
 
 
+APP_TEMPLATE = """<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Mock Todo App</title>
+<style>body{font-family:system-ui;background:#0f172a;color:#e2e8f0;max-width:420px;margin:40px auto}
+li{padding:6px 0}.done{text-decoration:line-through;opacity:.6}</style></head>
+<body><h1>__TITLE__</h1>
+<form id="f"><input id="t" placeholder="New task" required><button>Add</button></form>
+<p id="err" style="color:#f87171"></p><ul id="list"></ul><p id="empty">No tasks yet.</p>
+<script>
+async function load(){try{const rows=await viblumi.db.list("todos");
+document.getElementById("empty").style.display=rows.length?"none":"block";
+document.getElementById("list").innerHTML=rows.map(r=>`<li class="${r.done?"done":""}">
+<input type="checkbox" ${r.done?"checked":""} onchange="tog('${r.id}',this.checked)"> ${r.title}
+<button onclick="del('${r.id}')">x</button></li>`).join("")}catch(e){document.getElementById("err").textContent=e.message}}
+async function tog(id,d){await viblumi.db.update("todos",id,{done:d});load()}
+async function del(id){await viblumi.db.remove("todos",id);load()}
+document.getElementById("f").onsubmit=async e=>{e.preventDefault();const t=document.getElementById("t");
+await viblumi.db.insert("todos",{title:t.value,done:false});t.value="";load()};
+load();
+</script></body></html>"""
+
+
 @app.post("/chat/completions")
 async def chat_completions(request: Request):
     body = await request.json()
@@ -58,7 +79,8 @@ async def chat_completions(request: Request):
     prompt_hint = last_user[:120].replace("<", "").replace(">", "")
     title = "Updated Site" if editing else "Mock Site"
 
-    site = SITE_TEMPLATE.replace("__TITLE__", title).replace("__PROMPT__", prompt_hint)
+    is_app = "FULL-STACK APP MODE" in (body.get("messages") or [{}])[0].get("content", "")
+    site = (APP_TEMPLATE if is_app else SITE_TEMPLATE).replace("__TITLE__", title).replace("__PROMPT__", prompt_hint)
     note = "Here is your updated website!" if editing else "Here is a fresh website based on your idea!"
     reply = f"{note}\n\n```html\n{site}\n```"
 
