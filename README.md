@@ -27,8 +27,8 @@ browser                         Python backend (FastAPI)
 | --- | --- | --- |
 | `VIBLUMI_LLM_BASE_URL` | OpenAI-compatible API base | `https://api.groq.com/openai/v1` (Groq free tier) |
 | `VIBLUMI_LLM_API_KEY` | API key/token (secret!) | - |
-| `VIBLUMI_LLM_MODEL` | Model id | `llama-3.3-70b-versatile` |
-| `VIBLUMI_LLM_MAX_TOKENS` | Max reply length | `12000` |
+| `VIBLUMI_LLM_MODEL` | Model id | `openai/gpt-oss-120b` |
+| `VIBLUMI_LLM_MAX_TOKENS` | Max reply length | `7000` |
 
 ## Local development
 

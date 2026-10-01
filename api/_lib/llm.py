@@ -24,8 +24,8 @@ from openai import OpenAI
 # Read the configuration once when the module loads.
 BASE_URL = os.environ.get("VIBLUMI_LLM_BASE_URL", "https://api.groq.com/openai/v1")
 API_KEY = os.environ.get("VIBLUMI_LLM_API_KEY", "")
-MODEL = os.environ.get("VIBLUMI_LLM_MODEL", "llama-3.3-70b-versatile")
-MAX_TOKENS = int(os.environ.get("VIBLUMI_LLM_MAX_TOKENS", "12000"))
+MODEL = os.environ.get("VIBLUMI_LLM_MODEL", "openai/gpt-oss-120b")
+MAX_TOKENS = int(os.environ.get("VIBLUMI_LLM_MAX_TOKENS", "7000"))
 
 
 def is_configured() -> bool:
@@ -46,12 +46,18 @@ def stream_completion(messages):
         api_key=API_KEY,
         timeout=300,  # generous: code generation can take a while
     )
+    extra = {}
+    if "gpt-oss" in MODEL:
+        # gpt-oss models "think" before answering. Low effort keeps replies
+        # fast and saves the free tier's tokens-per-minute budget.
+        extra["reasoning_effort"] = os.environ.get("VIBLUMI_LLM_REASONING_EFFORT", "low")
     stream = client.chat.completions.create(
         model=MODEL,
         messages=messages,
         stream=True,          # <- this is what makes it stream
         max_tokens=MAX_TOKENS,
         temperature=0.7,      # a little creativity, still reliable
+        extra_body=extra,
     )
     for chunk in stream:
         if not chunk.choices:
